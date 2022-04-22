@@ -1,0 +1,20 @@
+<resources>
+    <string name="app_name">Chatt</string>
+    <string name="enter_your_message">Enter your message</string>
+    <string name="back">back</string>
+    <string name="send">send</string>
+    <string name="logout">logout</string>
+    <string name="password">Password</string>
+    <string name="email_id">Email ID</string>
+    <string name="confirm_password">Confirm Password</string>
+    <string name="register">Register</string>
+    <string name="name">Name</string>
+    <string name="already_a_user">Already a User?</string>
+    <string name="sign_in">Sign In</string>
+    <string name="new_user">New User?</string>
+    <string name="dialog_msg">Are you sure yoy want to\nLogout</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+    <string name="welcome_to_chatt">Welcome to Chatt!</string>
+    <string name="welcome_back">Welcome Back</string>
+</resources>

@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "537295097747",
+    "project_id": "pingout-d6886",
+    "storage_bucket": "pingout-d6886.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:537295097747:android:4bf49200313b587ac76266",
+        "android_client_info": {
+          "package_name": "com.example.pingout"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "537295097747-3vk4nsmfjicmja7ncvj2qdj5m9ku4b6h.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD2bWd3u9ZfO9Ua9ufKOdmKraPCqqRwlfw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "537295097747-3vk4nsmfjicmja7ncvj2qdj5m9ku4b6h.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
