@@ -41,9 +41,6 @@ public class UserAdapter extends RecyclerView.Adapter<UserAdapter.ViewHolder> {
             intent.putExtra("uid", user.getUid());
             homeActivity.startActivity(intent);
         });
-
-        if (FirebaseAuth.getInstance().getCurrentUser().getUid().equals(user.getUid()))
-            holder.itemView.setVisibility(View.GONE);
     }
 
     @Override

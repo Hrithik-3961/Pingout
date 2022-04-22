@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Chatt</string>
+    <string name="app_name">PINGOUT</string>
     <string name="enter_your_message">Enter your message</string>
     <string name="back">back</string>
     <string name="send">send</string>
@@ -15,6 +15,7 @@
     <string name="dialog_msg">Are you sure yoy want to\nLogout</string>
     <string name="yes">Yes</string>
     <string name="no">No</string>
-    <string name="welcome_to_chatt">Welcome to Chatt!</string>
-    <string name="welcome_back">Welcome Back</string>
+    <string name="welcome_to_pingout">Welcome to PINGOUT!</string>
+    <string name="register_now">Register Now!</string>
+    <string name="welcome_back">Welcome Back!</string>
 </resources>

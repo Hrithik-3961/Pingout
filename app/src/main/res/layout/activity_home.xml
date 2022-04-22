@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/colorBackground"
     tools:context=".HomeActivity">
 
     <LinearLayout
@@ -15,11 +16,13 @@
         android:padding="10dp">
 
         <TextView
+            android:id="@+id/app_name"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:text="@string/app_name"
+            android:textSize="35sp"
             android:textColor="@android:color/white"
-            android:textSize="25sp"
+            android:fontFamily="@font/aquire_bold"
             android:layout_weight="1"/>
 
         <ImageView
@@ -38,6 +41,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@id/toolbar"
-        android:padding="15dp" />
+        android:padding="15dp"
+        tools:listitem="@layout/item_user"/>
 
 </RelativeLayout>

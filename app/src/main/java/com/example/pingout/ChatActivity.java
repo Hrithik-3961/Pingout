@@ -1,7 +1,6 @@
 package com.example.pingout;
 
 import android.os.Bundle;
-import android.view.View;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -16,8 +15,18 @@ import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
+import java.io.UnsupportedEncodingException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
+
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.spec.SecretKeySpec;
 
 public class ChatActivity extends AppCompatActivity {
 
@@ -34,10 +43,24 @@ public class ChatActivity extends AppCompatActivity {
     private ViewModel viewModel;
     private FirebaseFirestore database;
 
+    private byte encryptionKey[] = {9, 115, 51, 86, 105, 4, -31, -23, -68, 88, 17, 20, 3, -105, 119, -53};
+    private Cipher cipher;
+    private SecretKeySpec secretKeySpec;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_chat);
+
+        try {
+            cipher = Cipher.getInstance("AES");
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        } catch (NoSuchPaddingException e) {
+            e.printStackTrace();
+        }
+
+        secretKeySpec = new SecretKeySpec(encryptionKey, "AES");
 
         database = FirebaseFirestore.getInstance();
 
@@ -54,12 +77,7 @@ public class ChatActivity extends AppCompatActivity {
         sendBtn = findViewById(R.id.sendBtn);
         back = findViewById(R.id.back);
 
-        back.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                onBackPressed();
-            }
-        });
+        back.setOnClickListener(view -> onBackPressed());
 
         recyclerView = findViewById(R.id.recyclerView);
         LinearLayoutManager layoutManager = new LinearLayoutManager(this);
@@ -88,9 +106,10 @@ public class ChatActivity extends AppCompatActivity {
 
         CollectionReference chatReference = database.collection("chats").document(senderRoom).collection("messages");
 
-        chatReference.addSnapshotListener((value, error) -> {
+        chatReference.orderBy("timestamp").addSnapshotListener((value, error) -> {
             arrayList.clear();
-            for(DocumentSnapshot snapshot : value.getDocuments()) {
+
+            for (DocumentSnapshot snapshot : value.getDocuments()) {
                 Messages msg = snapshot.toObject(Messages.class);
                 arrayList.add(msg);
             }
@@ -104,22 +123,45 @@ public class ChatActivity extends AppCompatActivity {
         });
 
         sendBtn.setOnClickListener(view -> {
-            String message = editMessage.getText().toString().trim();
+            String message = AESEncryptionMethod(editMessage.getText().toString().trim());
             if (!message.isEmpty()) {
                 editMessage.setText(null);
                 Date date = new Date();
                 final Messages msg = new Messages(message, senderUid, date.getTime());
                 arrayList.add(msg);
-                messagesAdapter.notifyItemInserted(arrayList.size());
-                UserMessages senderMsg = new UserMessages(arrayList, senderRoom);
-                viewModel.insertMessage(senderMsg);
                 database.collection("chats").document(senderRoom).collection("messages").document().set(msg)
-                        .addOnCompleteListener(task -> database.collection("chats").document(receiverRoom).collection("messages").document().set(msg)
+                        .addOnCompleteListener(task -> {
+                                database.collection("chats").document(receiverRoom).collection("messages").document().set(msg)
                                 .addOnCompleteListener(task1 -> {
-
-                                }));
+                                    messagesAdapter.notifyItemInserted(arrayList.size());
+                                    UserMessages senderMsg = new UserMessages(arrayList, senderRoom);
+                                    viewModel.insertMessage(senderMsg);
+                                });
+                        });
             }
         });
 
+    }
+
+    private String AESEncryptionMethod(String string) {
+
+        byte[] stringByte = string.getBytes();
+        byte[] encryptedByte = new byte[stringByte.length];
+
+        try {
+            cipher.init(Cipher.ENCRYPT_MODE, secretKeySpec);
+            encryptedByte = cipher.doFinal(stringByte);
+        } catch (InvalidKeyException | BadPaddingException | IllegalBlockSizeException e) {
+            e.printStackTrace();
+        }
+
+        String returnString = null;
+
+        try {
+            returnString = new String(encryptedByte, "ISO-8859-1");
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+        return returnString;
     }
 }

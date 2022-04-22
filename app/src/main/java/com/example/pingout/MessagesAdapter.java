@@ -16,9 +16,18 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.firebase.auth.FirebaseAuth;
 
+import java.io.UnsupportedEncodingException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.spec.SecretKeySpec;
 
 public class MessagesAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
@@ -49,6 +58,14 @@ public class MessagesAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
     public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
 
         Messages msg = arrayList.get(position);
+        String encryptedMessage = msg.message;
+        try {
+            String decryptedMessage = AESDecryptionMethod(encryptedMessage);
+            msg.message = decryptedMessage;
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+
         Messages nxtMsg = new Messages();
         String date1, date2 = "";
         if (position != 0) {
@@ -125,6 +142,30 @@ public class MessagesAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         Date date = new Date(timestamp);
         SimpleDateFormat sdf = new SimpleDateFormat("dd MMMM yyyy");
         return sdf.format(date);
+    }
+
+    private String AESDecryptionMethod(String string) throws UnsupportedEncodingException {
+        byte[] EncryptedByte = string.getBytes("ISO-8859-1");
+        String decryptedString = string;
+
+        byte[] decryption;
+
+        try {
+            Cipher decipher = Cipher.getInstance("AES");
+            byte encryptionKey[] = {9, 115, 51, 86, 105, 4, -31, -23, -68, 88, 17, 20, 3, -105, 119, -53};
+            SecretKeySpec secretKeySpec = new SecretKeySpec(encryptionKey, "AES");
+            decipher.init(Cipher.DECRYPT_MODE, secretKeySpec);
+            decryption = decipher.doFinal(EncryptedByte);
+            decryptedString = new String(decryption);
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        } catch (NoSuchPaddingException e) {
+            e.printStackTrace();
+        } catch (InvalidKeyException | BadPaddingException | IllegalBlockSizeException e) {
+            e.printStackTrace();
+        }
+
+        return decryptedString;
     }
 
     static class SenderViewHolder extends RecyclerView.ViewHolder {

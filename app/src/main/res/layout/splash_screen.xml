@@ -11,20 +11,20 @@
         android:id="@+id/welcomeText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/welcome_to_chatt"
         android:layout_centerInParent="true"
-        android:textSize="30sp"
-        android:textColor="@android:color/black"/>
+        android:text="@string/welcome_to_pingout"
+        android:textColor="@android:color/white"
+        android:textSize="30sp" />
 
     <com.google.android.material.progressindicator.LinearProgressIndicator
         android:id="@+id/progressIndicator"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="150dp"
-        app:trackThickness="8dp"
-        android:indeterminate="true"
-        app:indicatorColor="@color/colorPrimaryDark"
+        android:layout_below="@id/welcomeText"
         android:layout_marginHorizontal="20dp"
-        android:layout_below="@id/welcomeText"/>
+        android:layout_marginTop="150dp"
+        android:indeterminate="true"
+        app:indicatorColor="@color/colorAccent"
+        app:trackThickness="8dp" />
 
 </RelativeLayout>
