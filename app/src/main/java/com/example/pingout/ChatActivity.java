@@ -130,14 +130,12 @@ public class ChatActivity extends AppCompatActivity {
                 final Messages msg = new Messages(message, senderUid, date.getTime());
                 arrayList.add(msg);
                 database.collection("chats").document(senderRoom).collection("messages").document().set(msg)
-                        .addOnCompleteListener(task -> {
-                                database.collection("chats").document(receiverRoom).collection("messages").document().set(msg)
-                                .addOnCompleteListener(task1 -> {
-                                    messagesAdapter.notifyItemInserted(arrayList.size());
-                                    UserMessages senderMsg = new UserMessages(arrayList, senderRoom);
-                                    viewModel.insertMessage(senderMsg);
-                                });
-                        });
+                        .addOnCompleteListener(task -> database.collection("chats").document(receiverRoom).collection("messages").document().set(msg)
+                        .addOnCompleteListener(task1 -> {
+                            messagesAdapter.notifyItemInserted(arrayList.size());
+                            UserMessages senderMsg = new UserMessages(arrayList, senderRoom);
+                            viewModel.insertMessage(senderMsg);
+                        }));
             }
         });
 
