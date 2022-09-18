@@ -2,6 +2,7 @@ package com.example.pingout;
 
 import androidx.annotation.NonNull;
 import androidx.room.Entity;
+import androidx.room.Ignore;
 import androidx.room.PrimaryKey;
 import androidx.room.TypeConverters;
 
@@ -16,13 +17,14 @@ public class UserMessages {
 
     @PrimaryKey
     @NonNull
-    String roomId;
+    String roomId = "";
 
+    @Ignore
     public UserMessages() {
         //required for firebase
     }
 
-    public UserMessages(ArrayList<Messages> msg, String roomId) {
+    public UserMessages(ArrayList<Messages> msg, @NonNull String roomId) {
         this.msg = msg;
         this.roomId = roomId;
     }
@@ -31,15 +33,8 @@ public class UserMessages {
         return msg;
     }
 
-    public void setMsg(ArrayList<Messages> msg) {
-        this.msg = msg;
-    }
-
+    @NonNull
     public String getRoomId() {
         return roomId;
-    }
-
-    public void setRoomId(String roomId) {
-        this.roomId = roomId;
     }
 }

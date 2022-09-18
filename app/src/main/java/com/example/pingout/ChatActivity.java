@@ -1,6 +1,7 @@
 package com.example.pingout;
 
 import android.os.Bundle;
+import android.view.WindowManager;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -16,10 +17,10 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
 
 import javax.crypto.BadPaddingException;
@@ -43,20 +44,19 @@ public class ChatActivity extends AppCompatActivity {
     private ViewModel viewModel;
     private FirebaseFirestore database;
 
-    private byte encryptionKey[] = {9, 115, 51, 86, 105, 4, -31, -23, -68, 88, 17, 20, 3, -105, 119, -53};
+    private final byte[] encryptionKey = {9, 115, 51, 86, 105, 4, -31, -23, -68, 88, 17, 20, 3, -105, 119, -53};
     private Cipher cipher;
     private SecretKeySpec secretKeySpec;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
         setContentView(R.layout.activity_chat);
 
         try {
             cipher = Cipher.getInstance("AES");
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        } catch (NoSuchPaddingException e) {
+        } catch (NoSuchAlgorithmException | NoSuchPaddingException e) {
             e.printStackTrace();
         }
 
@@ -153,13 +153,6 @@ public class ChatActivity extends AppCompatActivity {
             e.printStackTrace();
         }
 
-        String returnString = null;
-
-        try {
-            returnString = new String(encryptedByte, "ISO-8859-1");
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-        }
-        return returnString;
+        return new String(encryptedByte, StandardCharsets.ISO_8859_1);
     }
 }
