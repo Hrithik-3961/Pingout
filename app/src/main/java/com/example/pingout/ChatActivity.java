@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.view.WindowManager;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -15,8 +16,8 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.vanniktech.emoji.EmojiPopup;
 
-import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -33,7 +34,7 @@ public class ChatActivity extends AppCompatActivity {
 
     private TextView user_name;
     private EditText editMessage;
-    private ImageView sendBtn, back;
+    private ImageView sendBtn, back, emojiBtn;
     private RecyclerView recyclerView;
 
     private String name, receiverUid, senderUid;
@@ -76,6 +77,7 @@ public class ChatActivity extends AppCompatActivity {
         editMessage = findViewById(R.id.message);
         sendBtn = findViewById(R.id.sendBtn);
         back = findViewById(R.id.back);
+        emojiBtn = findViewById(R.id.emoji_btn);
 
         back.setOnClickListener(view -> onBackPressed());
 
@@ -123,7 +125,12 @@ public class ChatActivity extends AppCompatActivity {
         });
 
         sendBtn.setOnClickListener(view -> {
-            String message = AESEncryptionMethod(editMessage.getText().toString().trim());
+            String text = editMessage.getText().toString().trim();
+            if(text.isEmpty()){
+                editMessage.setText(null);
+                return;
+            }
+            String message = AESEncryptionMethod(text);
             if (!message.isEmpty()) {
                 editMessage.setText(null);
                 Date date = new Date();
@@ -138,6 +145,14 @@ public class ChatActivity extends AppCompatActivity {
                         }));
             }
         });
+
+        EmojiPopup popup = EmojiPopup.Builder.fromRootView(
+                findViewById(R.id.root_view)
+        ).build(editMessage);
+
+        emojiBtn.setOnClickListener(view -> popup.toggle());
+
+        editMessage.setOnClickListener(view -> popup.dismiss());
 
     }
 
