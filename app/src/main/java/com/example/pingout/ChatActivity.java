@@ -1,11 +1,14 @@
 package com.example.pingout;
 
+import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
 import android.view.WindowManager;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
@@ -30,8 +33,9 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.SecretKeySpec;
 
-public class ChatActivity extends AppCompatActivity {
+public class ChatActivity extends AppCompatActivity implements TimerOverCallback {
 
+    private LinearLayout toolbar, sendLayout;
     private TextView user_name;
     private EditText editMessage;
     private ImageView sendBtn, back, emojiBtn;
@@ -49,11 +53,69 @@ public class ChatActivity extends AppCompatActivity {
     private Cipher cipher;
     private SecretKeySpec secretKeySpec;
 
+    private BiometricAuthentication auth;
+    private ThreadHandler threadHandler;
+    public static TimerOverCallback mListener;
+
+    @Override
+    public void onUserInteraction() {
+        super.onUserInteraction();
+
+        threadHandler.stopThread();
+        threadHandler.startThread();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        if(!threadHandler.isRunning()) {
+            mListener.onTimerOver();
+        }
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
         setContentView(R.layout.activity_chat);
+
+        mListener = this;
+        threadHandler = new ThreadHandler(this);
+
+        toolbar = findViewById(R.id.toolbar);
+        sendLayout = findViewById(R.id.sendLayout);
+        user_name = findViewById(R.id.name);
+        editMessage = findViewById(R.id.message);
+        sendBtn = findViewById(R.id.sendBtn);
+        back = findViewById(R.id.back);
+        emojiBtn = findViewById(R.id.emoji_btn);
+        recyclerView = findViewById(R.id.recyclerView);
+
+        AuthenticationCallback callback = new AuthenticationCallback() {
+            @Override
+            public void onAuthError() {
+                finishAffinity();
+                System.exit(0);
+            }
+
+            @Override
+            public void onAuthSucceeded() {
+                toolbar.setVisibility(View.VISIBLE);
+                recyclerView.setVisibility(View.VISIBLE);
+                sendLayout.setVisibility(View.VISIBLE);
+                threadHandler.startThread();
+            }
+
+            @Override
+            public void onAuthFailed() {
+                toolbar.setVisibility(View.INVISIBLE);
+                recyclerView.setVisibility(View.INVISIBLE);
+                sendLayout.setVisibility(View.INVISIBLE);
+            }
+        };
+        auth = new BiometricAuthentication(this, callback);
+        auth.setup();
 
         try {
             cipher = Cipher.getInstance("AES");
@@ -73,15 +135,9 @@ public class ChatActivity extends AppCompatActivity {
         senderRoom = senderUid + receiverUid;
         receiverRoom = receiverUid + senderUid;
         viewModel = new ViewModelProvider(this, new ViewModelFactory(getApplication(), senderRoom)).get(ViewModel.class);
-        user_name = findViewById(R.id.name);
-        editMessage = findViewById(R.id.message);
-        sendBtn = findViewById(R.id.sendBtn);
-        back = findViewById(R.id.back);
-        emojiBtn = findViewById(R.id.emoji_btn);
 
         back.setOnClickListener(view -> onBackPressed());
 
-        recyclerView = findViewById(R.id.recyclerView);
         LinearLayoutManager layoutManager = new LinearLayoutManager(this);
         layoutManager.setStackFromEnd(true);
         recyclerView.setLayoutManager(layoutManager);
@@ -126,7 +182,7 @@ public class ChatActivity extends AppCompatActivity {
 
         sendBtn.setOnClickListener(view -> {
             String text = editMessage.getText().toString().trim();
-            if(text.isEmpty()){
+            if (text.isEmpty()) {
                 editMessage.setText(null);
                 return;
             }
@@ -138,11 +194,11 @@ public class ChatActivity extends AppCompatActivity {
                 arrayList.add(msg);
                 database.collection("chats").document(senderRoom).collection("messages").document().set(msg)
                         .addOnCompleteListener(task -> database.collection("chats").document(receiverRoom).collection("messages").document().set(msg)
-                        .addOnCompleteListener(task1 -> {
-                            messagesAdapter.notifyItemInserted(arrayList.size());
-                            UserMessages senderMsg = new UserMessages(arrayList, senderRoom);
-                            viewModel.insertMessage(senderMsg);
-                        }));
+                                .addOnCompleteListener(task1 -> {
+                                    messagesAdapter.notifyItemInserted(arrayList.size());
+                                    UserMessages senderMsg = new UserMessages(arrayList, senderRoom);
+                                    viewModel.insertMessage(senderMsg);
+                                }));
             }
         });
 
@@ -169,5 +225,17 @@ public class ChatActivity extends AppCompatActivity {
         }
 
         return new String(encryptedByte, StandardCharsets.ISO_8859_1);
+    }
+
+    @Override
+    public void onTimerOver() {
+        runOnUiThread(() -> {
+
+            Toast.makeText(ChatActivity.this, "Session Expired. Please re-authenticate!", Toast.LENGTH_SHORT).show();
+            toolbar.setVisibility(View.INVISIBLE);
+            recyclerView.setVisibility(View.INVISIBLE);
+            sendLayout.setVisibility(View.INVISIBLE);
+            auth.authenticate();
+        });
     }
 }
