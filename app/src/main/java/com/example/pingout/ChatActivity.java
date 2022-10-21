@@ -1,6 +1,5 @@
 package com.example.pingout;
 
-import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.view.WindowManager;
@@ -19,8 +18,13 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.gson.Gson;
 import com.vanniktech.emoji.EmojiPopup;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -33,6 +37,11 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.SecretKeySpec;
 
+import io.socket.client.Ack;
+import io.socket.client.IO;
+import io.socket.client.Socket;
+import io.socket.emitter.Emitter;
+
 public class ChatActivity extends AppCompatActivity implements TimerOverCallback {
 
     private LinearLayout toolbar, sendLayout;
@@ -41,13 +50,14 @@ public class ChatActivity extends AppCompatActivity implements TimerOverCallback
     private ImageView sendBtn, back, emojiBtn;
     private RecyclerView recyclerView;
 
+    private Users user;
     private String name, receiverUid, senderUid;
     private String senderRoom, receiverRoom;
     private ArrayList<Messages> arrayList;
     private MessagesAdapter messagesAdapter;
 
     private ViewModel viewModel;
-    private FirebaseFirestore database;
+//    private FirebaseFirestore database;
 
     private final byte[] encryptionKey = {9, 115, 51, 86, 105, 4, -31, -23, -68, 88, 17, 20, 3, -105, 119, -53};
     private Cipher cipher;
@@ -56,6 +66,13 @@ public class ChatActivity extends AppCompatActivity implements TimerOverCallback
     private BiometricAuthentication auth;
     private ThreadHandler threadHandler;
     public static TimerOverCallback mListener;
+
+    private Socket mSocket;
+    {
+        try {
+            mSocket = IO.socket("http://192.168.29.11:5000");
+        } catch (URISyntaxException ignored) {}
+    }
 
     @Override
     public void onUserInteraction() {
@@ -69,16 +86,44 @@ public class ChatActivity extends AppCompatActivity implements TimerOverCallback
     protected void onResume() {
         super.onResume();
 
-        if(!threadHandler.isRunning()) {
+        if (!threadHandler.isRunning()) {
             mListener.onTimerOver();
         }
     }
+
+    private Emitter.Listener onNewMessage = args -> {
+        runOnUiThread(() -> {
+            JSONObject data = (JSONObject) args[0];
+            String message;
+            Gson gson = new Gson();
+            try {
+                message = data.getString("message");
+                Messages msg = gson.fromJson(message, Messages.class);
+                arrayList.add(msg);
+
+                UserMessages senderMsg = new UserMessages(arrayList, senderRoom);
+                UserMessages receiverMsg = new UserMessages(arrayList, receiverRoom);
+                viewModel.insertMessage(senderMsg);
+                viewModel.insertMessage(receiverMsg);
+                messagesAdapter.notifyItemInserted(arrayList.size());
+                if (messagesAdapter.getItemCount() != 0)
+                    recyclerView.scrollToPosition(messagesAdapter.getItemCount() - 1);
+            } catch (JSONException e) {
+                return;
+            }
+        });
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
         setContentView(R.layout.activity_chat);
+
+        mSocket.on("message", onNewMessage);
+        mSocket.connect();
+
+        mSocket.emit("join", user);
 
         mListener = this;
         threadHandler = new ThreadHandler(this);
@@ -125,15 +170,16 @@ public class ChatActivity extends AppCompatActivity implements TimerOverCallback
 
         secretKeySpec = new SecretKeySpec(encryptionKey, "AES");
 
-        database = FirebaseFirestore.getInstance();
+//        database = FirebaseFirestore.getInstance();
 
-        name = getIntent().getStringExtra("name");
-        receiverUid = getIntent().getStringExtra("uid");
+        user = (Users) getIntent().getSerializableExtra("user");
+//        name = getIntent().getStringExtra("name");
+//        receiverUid = getIntent().getStringExtra("uid");
         senderUid = FirebaseAuth.getInstance().getUid();
         arrayList = new ArrayList<>();
 
-        senderRoom = senderUid + receiverUid;
-        receiverRoom = receiverUid + senderUid;
+        senderRoom = senderUid + user.getUid();
+        receiverRoom = user.getUid() + senderUid;
         viewModel = new ViewModelProvider(this, new ViewModelFactory(getApplication(), senderRoom)).get(ViewModel.class);
 
         back.setOnClickListener(view -> onBackPressed());
@@ -150,7 +196,7 @@ public class ChatActivity extends AppCompatActivity implements TimerOverCallback
                 recyclerView.smoothScrollToPosition(messagesAdapter.getItemCount() - 1);
         });
 
-        user_name.setText(name);
+        user_name.setText(user.getName());
 
         viewModel.getMessages().observe(this, userMessages -> {
             if (userMessages != null) {
@@ -162,7 +208,7 @@ public class ChatActivity extends AppCompatActivity implements TimerOverCallback
             }
         });
 
-        CollectionReference chatReference = database.collection("chats").document(senderRoom).collection("messages");
+        /*CollectionReference chatReference = database.collection("chats").document(senderRoom).collection("messages");
 
         chatReference.orderBy("timestamp").addSnapshotListener((value, error) -> {
             arrayList.clear();
@@ -178,7 +224,7 @@ public class ChatActivity extends AppCompatActivity implements TimerOverCallback
             messagesAdapter.notifyItemInserted(arrayList.size());
             if (messagesAdapter.getItemCount() != 0)
                 recyclerView.scrollToPosition(messagesAdapter.getItemCount() - 1);
-        });
+        });*/
 
         sendBtn.setOnClickListener(view -> {
             String text = editMessage.getText().toString().trim();
@@ -192,13 +238,18 @@ public class ChatActivity extends AppCompatActivity implements TimerOverCallback
                 Date date = new Date();
                 final Messages msg = new Messages(message, senderUid, date.getTime());
                 arrayList.add(msg);
-                database.collection("chats").document(senderRoom).collection("messages").document().set(msg)
+                mSocket.emit("sendMessage", msg, (Ack) args -> {
+                    messagesAdapter.notifyItemInserted(arrayList.size());
+                    UserMessages senderMsg = new UserMessages(arrayList, senderRoom);
+                    viewModel.insertMessage(senderMsg);
+                });
+                /*database.collection("chats").document(senderRoom).collection("messages").document().set(msg)
                         .addOnCompleteListener(task -> database.collection("chats").document(receiverRoom).collection("messages").document().set(msg)
                                 .addOnCompleteListener(task1 -> {
                                     messagesAdapter.notifyItemInserted(arrayList.size());
                                     UserMessages senderMsg = new UserMessages(arrayList, senderRoom);
                                     viewModel.insertMessage(senderMsg);
-                                }));
+                                }));*/
             }
         });
 
@@ -237,5 +288,13 @@ public class ChatActivity extends AppCompatActivity implements TimerOverCallback
             sendLayout.setVisibility(View.INVISIBLE);
             auth.authenticate();
         });
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+
+        mSocket.emit("disconnect");
+        mSocket.off();
     }
 }

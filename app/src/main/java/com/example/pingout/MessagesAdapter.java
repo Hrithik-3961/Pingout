@@ -152,16 +152,12 @@ public class MessagesAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
 
         try {
             Cipher decipher = Cipher.getInstance("AES");
-            byte encryptionKey[] = {9, 115, 51, 86, 105, 4, -31, -23, -68, 88, 17, 20, 3, -105, 119, -53};
+            byte[] encryptionKey = {9, 115, 51, 86, 105, 4, -31, -23, -68, 88, 17, 20, 3, -105, 119, -53};
             SecretKeySpec secretKeySpec = new SecretKeySpec(encryptionKey, "AES");
             decipher.init(Cipher.DECRYPT_MODE, secretKeySpec);
             decryption = decipher.doFinal(EncryptedByte);
             decryptedString = new String(decryption);
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        } catch (NoSuchPaddingException e) {
-            e.printStackTrace();
-        } catch (InvalidKeyException | BadPaddingException | IllegalBlockSizeException e) {
+        } catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | BadPaddingException | IllegalBlockSizeException e) {
             e.printStackTrace();
         }
 

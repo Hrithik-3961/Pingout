@@ -8,7 +8,9 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import androidx.appcompat.app.AppCompatActivity;
+
 import com.google.firebase.auth.FirebaseAuth;
 
 public class SignIn extends AppCompatActivity {
@@ -26,7 +28,7 @@ public class SignIn extends AppCompatActivity {
     protected void onStart() {
         super.onStart();
 
-        if(FirebaseAuth.getInstance().getCurrentUser() != null) {
+        if (FirebaseAuth.getInstance().getCurrentUser() != null) {
             startActivity(new Intent(this, HomeActivity.class));
             finishAffinity();
         }

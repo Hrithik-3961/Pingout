@@ -20,23 +20,12 @@ public class Messages {
         return message;
     }
 
-    public void setMessage(String message) {
-        this.message = message;
-    }
-
     public String getSenderId() {
         return senderId;
-    }
-
-    public void setSenderId(String senderId) {
-        this.senderId = senderId;
     }
 
     public long getTimestamp() {
         return timestamp;
     }
 
-    public void setTimestamp(long timestamp) {
-        this.timestamp = timestamp;
-    }
 }

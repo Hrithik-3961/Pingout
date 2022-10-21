@@ -9,8 +9,6 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.firebase.auth.FirebaseAuth;
-
 import java.util.ArrayList;
 
 public class UserAdapter extends RecyclerView.Adapter<UserAdapter.ViewHolder> {
@@ -37,8 +35,9 @@ public class UserAdapter extends RecyclerView.Adapter<UserAdapter.ViewHolder> {
 
         holder.itemView.setOnClickListener(view -> {
             Intent intent = new Intent(homeActivity, ChatActivity.class);
-            intent.putExtra("name", user.getName());
-            intent.putExtra("uid", user.getUid());
+            intent.putExtra("user", user);
+//            intent.putExtra("name", user.getName());
+//            intent.putExtra("uid", user.getUid());
             homeActivity.startActivity(intent);
         });
     }
