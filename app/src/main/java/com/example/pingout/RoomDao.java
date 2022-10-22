@@ -15,12 +15,15 @@ public interface RoomDao {
     void insertUser(Users user);
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    void insertMessage(UserMessages msg);
+    void insertMessages(UserMessages msg);
+
+    @Query("DELETE FROM UserMessages WHERE roomId = :roomId")
+    void deleteMessages(String roomId);
 
     @Query("SELECT * FROM Users")
     LiveData<List<Users>> getAllUsers();
 
-    @Query("SELECT * FROM UserMessages WHERE roomId == :roomId")
+    @Query("SELECT * FROM UserMessages WHERE roomId = :roomId")
     LiveData<UserMessages> getMessages(String roomId);
 
 }

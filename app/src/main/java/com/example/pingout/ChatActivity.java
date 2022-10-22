@@ -1,6 +1,5 @@
 package com.example.pingout;
 
-import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.view.WindowManager;
@@ -19,6 +18,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.WriteBatch;
 import com.vanniktech.emoji.EmojiPopup;
 
 import java.nio.charset.StandardCharsets;
@@ -69,7 +69,7 @@ public class ChatActivity extends AppCompatActivity implements TimerOverCallback
     protected void onResume() {
         super.onResume();
 
-        if(!threadHandler.isRunning()) {
+        if (!threadHandler.isRunning()) {
             mListener.onTimerOver();
         }
     }
@@ -167,17 +167,24 @@ public class ChatActivity extends AppCompatActivity implements TimerOverCallback
         chatReference.orderBy("timestamp").addSnapshotListener((value, error) -> {
             arrayList.clear();
 
-            for (DocumentSnapshot snapshot : value.getDocuments()) {
-                Messages msg = snapshot.toObject(Messages.class);
-                arrayList.add(msg);
+            assert value != null;
+            if (value.getDocuments().size() == 0) {
+                viewModel.deleteMessages(senderRoom);
+                viewModel.deleteMessages(receiverRoom);
+                messagesAdapter.notifyDataSetChanged();
+            } else {
+                for (DocumentSnapshot snapshot : value.getDocuments()) {
+                    Messages msg = snapshot.toObject(Messages.class);
+                    arrayList.add(msg);
+                }
+                UserMessages senderMsg = new UserMessages(arrayList, senderRoom);
+                UserMessages receiverMsg = new UserMessages(arrayList, receiverRoom);
+                viewModel.insertMessage(senderMsg);
+                viewModel.insertMessage(receiverMsg);
+                messagesAdapter.notifyItemInserted(arrayList.size());
+                if (messagesAdapter.getItemCount() != 0)
+                    recyclerView.scrollToPosition(messagesAdapter.getItemCount() - 1);
             }
-            UserMessages senderMsg = new UserMessages(arrayList, senderRoom);
-            UserMessages receiverMsg = new UserMessages(arrayList, receiverRoom);
-            viewModel.insertMessage(senderMsg);
-            viewModel.insertMessage(receiverMsg);
-            messagesAdapter.notifyItemInserted(arrayList.size());
-            if (messagesAdapter.getItemCount() != 0)
-                recyclerView.scrollToPosition(messagesAdapter.getItemCount() - 1);
         });
 
         sendBtn.setOnClickListener(view -> {
@@ -186,19 +193,37 @@ public class ChatActivity extends AppCompatActivity implements TimerOverCallback
                 editMessage.setText(null);
                 return;
             }
-            String message = AESEncryptionMethod(text);
-            if (!message.isEmpty()) {
-                editMessage.setText(null);
-                Date date = new Date();
-                final Messages msg = new Messages(message, senderUid, date.getTime());
-                arrayList.add(msg);
-                database.collection("chats").document(senderRoom).collection("messages").document().set(msg)
-                        .addOnCompleteListener(task -> database.collection("chats").document(receiverRoom).collection("messages").document().set(msg)
-                                .addOnCompleteListener(task1 -> {
-                                    messagesAdapter.notifyItemInserted(arrayList.size());
-                                    UserMessages senderMsg = new UserMessages(arrayList, senderRoom);
-                                    viewModel.insertMessage(senderMsg);
-                                }));
+            if (text.equals("/clear")) {
+                WriteBatch batch = database.batch();
+                database.collection("chats").document(senderRoom).collection("messages").get().addOnSuccessListener(querySnapshots -> {
+                    for (DocumentSnapshot doc : querySnapshots) {
+                        batch.delete(doc.getReference());
+                    }
+                }).addOnCompleteListener(task -> database.collection("chats").document(receiverRoom).collection("messages").get().addOnSuccessListener(querySnapshots -> {
+                    for (DocumentSnapshot doc : querySnapshots) {
+                        batch.delete(doc.getReference());
+                    }
+                    batch.commit().addOnCompleteListener((task1 -> {
+                        viewModel.deleteMessages(senderRoom);
+                        viewModel.deleteMessages(receiverRoom);
+                        editMessage.setText(null);
+                    }));
+                }));
+            } else {
+                String message = AESEncryptionMethod(text);
+                if (!message.isEmpty()) {
+                    editMessage.setText(null);
+                    Date date = new Date();
+                    final Messages msg = new Messages(message, senderUid, date.getTime());
+                    arrayList.add(msg);
+                    database.collection("chats").document(senderRoom).collection("messages").document().set(msg)
+                            .addOnCompleteListener(task -> database.collection("chats").document(receiverRoom).collection("messages").document().set(msg)
+                                    .addOnCompleteListener(task1 -> {
+                                        messagesAdapter.notifyItemInserted(arrayList.size());
+                                        UserMessages senderMsg = new UserMessages(arrayList, senderRoom);
+                                        viewModel.insertMessage(senderMsg);
+                                    }));
+                }
             }
         });
 

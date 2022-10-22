@@ -30,7 +30,11 @@ public class ViewModel extends AndroidViewModel {
     }
 
     public void insertMessage(UserMessages msg) {
-        repository.insertMessage(msg);
+        repository.insertMessages(msg);
+    }
+
+    public void deleteMessages(String roomId) {
+        repository.deleteMessages(roomId);
     }
 
     public LiveData<List<Users>> getAllUsers() {

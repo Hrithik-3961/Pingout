@@ -15,7 +15,7 @@ public class TimerService extends JobService {
     @Override
     public boolean onStartJob(JobParameters jobParameters) {
         new Thread(() -> {
-            for(int i = 0; i < 6; i++) {
+            for(int i = 0; i < 3600; i++) {
                 if(jobCancelled)
                     return;
                 Log.d("myTag", "onStartJob: " + i);

@@ -14,6 +14,7 @@ interface TimerOverCallback {
 public class ThreadHandler {
 
     Context context;
+
     ThreadHandler(Context ctx) {
         context = ctx;
     }

@@ -30,16 +30,15 @@ public class Repository {
     }
 
     public void insertUser(final Users user) {
-        executorService.execute(new Runnable() {
-            @Override
-            public void run() {
-                roomDao.insertUser(user);
-            }
-        });
+        executorService.execute(() -> roomDao.insertUser(user));
     }
 
-    public void insertMessage(final UserMessages msg){
-        executorService.execute(() -> roomDao.insertMessage(msg));
+    public void insertMessages(final UserMessages msg){
+        executorService.execute(() -> roomDao.insertMessages(msg));
+    }
+
+    public void deleteMessages(final String roomId) {
+        executorService.execute(() -> roomDao.deleteMessages(roomId));
     }
 
     public LiveData<List<Users>> getAllUsers() {

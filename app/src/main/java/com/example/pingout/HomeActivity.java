@@ -1,6 +1,5 @@
 package com.example.pingout;
 
-import android.app.Activity;
 import android.app.Dialog;
 import android.content.Intent;
 import android.graphics.LinearGradient;
@@ -14,7 +13,6 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.lifecycle.ViewModelProvider;
@@ -59,7 +57,7 @@ public class HomeActivity extends AppCompatActivity implements TimerOverCallback
     protected void onResume() {
         super.onResume();
 
-        if(!threadHandler.isRunning()) {
+        if (!threadHandler.isRunning()) {
             mListener.onTimerOver();
         }
     }
