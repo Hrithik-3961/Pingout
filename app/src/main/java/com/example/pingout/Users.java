@@ -5,8 +5,10 @@ import androidx.room.Entity;
 import androidx.room.Ignore;
 import androidx.room.PrimaryKey;
 
+import java.io.Serializable;
+
 @Entity
-public class Users {
+public class Users implements Serializable {
 
     @PrimaryKey
     @NonNull
@@ -14,16 +16,18 @@ public class Users {
 
     private String name;
     private String emailId;
+    private String token;
 
     @Ignore
     public Users() {
         //required for firebase
     }
 
-    public Users(@NonNull String uid, String name, String emailId) {
+    public Users(@NonNull String uid, String name, String emailId, String token) {
         this.uid = uid;
         this.name = name;
         this.emailId = emailId;
+        this.token = token;
     }
 
     @NonNull
@@ -35,11 +39,19 @@ public class Users {
         return name;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public String getToken() {
+        return token;
     }
 
     public String getEmailId() {
         return emailId;
+    }
+
+    public void setToken(String token) {
+        this.token = token;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 }

@@ -11,7 +11,11 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.messaging.FirebaseMessaging;
 
 public class SignIn extends AppCompatActivity {
 
@@ -70,8 +74,19 @@ public class SignIn extends AppCompatActivity {
             auth.signInWithEmailAndPassword(email, password).addOnCompleteListener(task -> {
                 progressDialog.dismiss();
                 if (task.isSuccessful()) {
-                    startActivity(new Intent(SignIn.this, HomeActivity.class));
-                    finishAffinity();
+                    FirebaseMessaging.getInstance().getToken().addOnCompleteListener((task1 -> {
+                        if(task1.isSuccessful()) {
+                            String token = task1.getResult();
+                            String uid = FirebaseAuth.getInstance().getUid();
+                            FirebaseFirestore db = FirebaseFirestore.getInstance();
+                            assert uid != null;
+                            DocumentReference document = db.collection("users").document(uid);
+                            document.update("token", token).addOnSuccessListener(unused -> {
+                                startActivity(new Intent(SignIn.this, HomeActivity.class));
+                                finishAffinity();
+                            });
+                        }
+                    }));
                 } else
                     Toast.makeText(SignIn.this, "Unable to Sign In", Toast.LENGTH_SHORT).show();
             });

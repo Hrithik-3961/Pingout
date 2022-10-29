@@ -20,10 +20,16 @@ public interface RoomDao {
     @Query("DELETE FROM UserMessages WHERE roomId = :roomId")
     void deleteMessages(String roomId);
 
+    @Query("SELECT * FROM Users WHERE uid = :uid")
+    Users getUser(String uid);
+
     @Query("SELECT * FROM Users")
     LiveData<List<Users>> getAllUsers();
 
     @Query("SELECT * FROM UserMessages WHERE roomId = :roomId")
     LiveData<UserMessages> getMessages(String roomId);
+
+    @Query("SELECT * FROM UserMessages WHERE roomId = :roomId LIMIT 1")
+    UserMessages getSingleMessages(String roomId);
 
 }

@@ -15,6 +15,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.messaging.FirebaseMessaging;
 
 public class Register extends AppCompatActivity {
 
@@ -84,16 +85,20 @@ public class Register extends AppCompatActivity {
             progressDialog.show();
             auth.createUserWithEmailAndPassword(email, password).addOnCompleteListener(task -> {
                 if (task.isSuccessful()) {
-                    DocumentReference reference = database.collection("user").document(auth.getCurrentUser().getUid());
-                    Log.d("myTag", reference.toString());
-                    final Users user = new Users(auth.getCurrentUser().getUid(), name, email);
-                    reference.set(user).addOnCompleteListener(task1 -> {
-                        progressDialog.dismiss();
-                        if (task1.isSuccessful())
-                            startActivity(new Intent(Register.this, HomeActivity.class));
-                        else
-                            Toast.makeText(Register.this, "Unable to Register user: " + task1.getException(), Toast.LENGTH_SHORT).show();
-                    });
+                    DocumentReference reference = database.collection("users").document(auth.getCurrentUser().getUid());
+                    FirebaseMessaging.getInstance().getToken().addOnCompleteListener((task1 -> {
+                        if(task1.isSuccessful()) {
+                            String token = task1.getResult();
+                            final Users user = new Users(auth.getCurrentUser().getUid(), name, email, token);
+                            reference.set(user).addOnCompleteListener(task2 -> {
+                                progressDialog.dismiss();
+                                if (task2.isSuccessful())
+                                    startActivity(new Intent(Register.this, HomeActivity.class));
+                                else
+                                    Toast.makeText(Register.this, "Unable to Register user: " + task2.getException(), Toast.LENGTH_SHORT).show();
+                            });
+                        }
+                    }));
                 } else {
                     progressDialog.dismiss();
                     Toast.makeText(Register.this, "Unable to Register user: " + task.getException(), Toast.LENGTH_SHORT).show();

@@ -118,7 +118,7 @@ public class HomeActivity extends AppCompatActivity implements TimerOverCallback
         arrayList = new ArrayList<>();
 
         database = FirebaseFirestore.getInstance();
-        reference = database.collection("user");
+        reference = database.collection("users");
         reference.addSnapshotListener((value, error) -> {
             for (DocumentSnapshot snapshot : value.getDocuments()) {
                 Users user = snapshot.toObject(Users.class);

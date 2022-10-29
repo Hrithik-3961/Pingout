@@ -1,6 +1,7 @@
 package com.example.pingout;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.EditText;
@@ -18,9 +19,12 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.WriteBatch;
 import com.vanniktech.emoji.EmojiPopup;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -33,6 +37,12 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.SecretKeySpec;
 
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+
 public class ChatActivity extends AppCompatActivity implements TimerOverCallback {
 
     private LinearLayout toolbar, sendLayout;
@@ -41,13 +51,13 @@ public class ChatActivity extends AppCompatActivity implements TimerOverCallback
     private ImageView sendBtn, back, emojiBtn;
     private RecyclerView recyclerView;
 
+    private Users receiver;
     private String name, receiverUid, senderUid;
     private String senderRoom, receiverRoom;
     private ArrayList<Messages> arrayList;
     private MessagesAdapter messagesAdapter;
 
     private ViewModel viewModel;
-    private FirebaseFirestore database;
 
     private final byte[] encryptionKey = {9, 115, 51, 86, 105, 4, -31, -23, -68, 88, 17, 20, 3, -105, 119, -53};
     private Cipher cipher;
@@ -125,10 +135,9 @@ public class ChatActivity extends AppCompatActivity implements TimerOverCallback
 
         secretKeySpec = new SecretKeySpec(encryptionKey, "AES");
 
-        database = FirebaseFirestore.getInstance();
-
-        name = getIntent().getStringExtra("name");
-        receiverUid = getIntent().getStringExtra("uid");
+        receiver = (Users) getIntent().getSerializableExtra("user");
+        name = receiver.getName();
+        receiverUid = receiver.getUid();
         senderUid = FirebaseAuth.getInstance().getUid();
         arrayList = new ArrayList<>();
 
@@ -162,30 +171,14 @@ public class ChatActivity extends AppCompatActivity implements TimerOverCallback
             }
         });
 
-        CollectionReference chatReference = database.collection("chats").document(senderRoom).collection("messages");
-
-        chatReference.orderBy("timestamp").addSnapshotListener((value, error) -> {
-            arrayList.clear();
-
-            assert value != null;
-            if (value.getDocuments().size() == 0) {
-                viewModel.deleteMessages(senderRoom);
-                viewModel.deleteMessages(receiverRoom);
-                messagesAdapter.notifyDataSetChanged();
-            } else {
-                for (DocumentSnapshot snapshot : value.getDocuments()) {
-                    Messages msg = snapshot.toObject(Messages.class);
-                    arrayList.add(msg);
-                }
-                UserMessages senderMsg = new UserMessages(arrayList, senderRoom);
-                UserMessages receiverMsg = new UserMessages(arrayList, receiverRoom);
-                viewModel.insertMessage(senderMsg);
-                viewModel.insertMessage(receiverMsg);
-                messagesAdapter.notifyItemInserted(arrayList.size());
-                if (messagesAdapter.getItemCount() != 0)
-                    recyclerView.scrollToPosition(messagesAdapter.getItemCount() - 1);
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        CollectionReference reference = db.collection("users");
+        reference.addSnapshotListener(((value, error) -> {
+            for (DocumentSnapshot snapshot : value.getDocuments()) {
+                Users user = snapshot.toObject(Users.class);
+                viewModel.insertUser(user);
             }
-        });
+        }));
 
         sendBtn.setOnClickListener(view -> {
             String text = editMessage.getText().toString().trim();
@@ -194,35 +187,21 @@ public class ChatActivity extends AppCompatActivity implements TimerOverCallback
                 return;
             }
             if (text.equals("/clear")) {
-                WriteBatch batch = database.batch();
-                database.collection("chats").document(senderRoom).collection("messages").get().addOnSuccessListener(querySnapshots -> {
-                    for (DocumentSnapshot doc : querySnapshots) {
-                        batch.delete(doc.getReference());
-                    }
-                }).addOnCompleteListener(task -> database.collection("chats").document(receiverRoom).collection("messages").get().addOnSuccessListener(querySnapshots -> {
-                    for (DocumentSnapshot doc : querySnapshots) {
-                        batch.delete(doc.getReference());
-                    }
-                    batch.commit().addOnCompleteListener((task1 -> {
-                        viewModel.deleteMessages(senderRoom);
-                        viewModel.deleteMessages(receiverRoom);
-                        editMessage.setText(null);
-                    }));
-                }));
-            } else {
+               sendMessage("command", text, "", 0L, receiverRoom, receiver.getToken());
+               viewModel.deleteMessages(senderRoom);
+               editMessage.setText(null);
+            }
+            else {
                 String message = AESEncryptionMethod(text);
                 if (!message.isEmpty()) {
                     editMessage.setText(null);
                     Date date = new Date();
                     final Messages msg = new Messages(message, senderUid, date.getTime());
                     arrayList.add(msg);
-                    database.collection("chats").document(senderRoom).collection("messages").document().set(msg)
-                            .addOnCompleteListener(task -> database.collection("chats").document(receiverRoom).collection("messages").document().set(msg)
-                                    .addOnCompleteListener(task1 -> {
-                                        messagesAdapter.notifyItemInserted(arrayList.size());
-                                        UserMessages senderMsg = new UserMessages(arrayList, senderRoom);
-                                        viewModel.insertMessage(senderMsg);
-                                    }));
+
+                    sendMessage("chat", message, senderUid, date.getTime(), receiverRoom, receiver.getToken());
+                    UserMessages senderMsg = new UserMessages(arrayList, senderRoom);
+                    viewModel.insertMessage(senderMsg);
                 }
             }
         });
@@ -235,6 +214,34 @@ public class ChatActivity extends AppCompatActivity implements TimerOverCallback
 
         editMessage.setOnClickListener(view -> popup.dismiss());
 
+    }
+
+    private static void sendMessage(String type, String message, String senderUid, long timestamp, String receiverRoom, String receiverToken) {
+        new Thread(() -> {
+            try {
+                OkHttpClient client = new OkHttpClient();
+                JSONObject json = new JSONObject();
+                JSONObject dataJson = new JSONObject();
+                dataJson.put("type", type);
+                dataJson.put("message", message);
+                dataJson.put("senderId", senderUid);
+                dataJson.put("timestamp", String.valueOf(timestamp));
+                dataJson.put("roomId", receiverRoom);
+                json.put("data", dataJson);
+                json.put("to", receiverToken);
+                RequestBody body = RequestBody.create(json.toString(), MediaType.parse("application/json; charset=utf-8"));
+                Request request = new Request.Builder()
+                        .header("Authorization", "key=" + Constants.fcm_key)
+                        .url("https://fcm.googleapis.com/fcm/send")
+                        .post(body)
+                        .build();
+                Response response = client.newCall(request).execute();
+                String responseBody = response.body().string();
+                Log.d("myTag", responseBody);
+            } catch (JSONException | IOException e) {
+                e.printStackTrace();
+            }
+        }).start();
     }
 
     private String AESEncryptionMethod(String string) {

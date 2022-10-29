@@ -41,11 +41,19 @@ public class Repository {
         executorService.execute(() -> roomDao.deleteMessages(roomId));
     }
 
+    public Users getUser(String uid) {
+        return roomDao.getUser(uid);
+    }
+
     public LiveData<List<Users>> getAllUsers() {
         return allUsers;
     }
 
     public LiveData<UserMessages> getMessages() {
         return messages;
+    }
+
+    public UserMessages getSingleMessages(String roomId) {
+        return roomDao.getSingleMessages(roomId);
     }
 }
